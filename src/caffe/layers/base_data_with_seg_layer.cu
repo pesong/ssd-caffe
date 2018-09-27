@@ -11,8 +11,8 @@ void BasePrefetchingDataWithSegLayer<Dtype>::Forward_gpu(
 
   // Reshape to loaded data.
   top[0]->ReshapeLike(batch->data_);
-    //added by pesong
-  top[2]->ReshapeLike(batch->label_img_);
+//    //added by pesong
+//  top[2]->ReshapeLike(batch->label_img_);
 
   // Copy the data
   caffe_copy(batch->data_.count(), batch->data_.gpu_data(),
@@ -24,9 +24,8 @@ void BasePrefetchingDataWithSegLayer<Dtype>::Forward_gpu(
     caffe_copy(batch->label_.count(), batch->label_.gpu_data(),
         top[1]->mutable_gpu_data());
   }
-  //added by pesong
-  caffe_copy(batch->label_img_.count(), batch->label_img_.gpu_data(),
-        top[2]->mutable_gpu_data());
+//  //added by pesong
+//  caffe_copy(batch->label_img_.count(), batch->label_img_.gpu_data(), top[2]->mutable_gpu_data());
 
 
   // Ensure the copy is synchronous wrt the host, so that the next batch isn't
