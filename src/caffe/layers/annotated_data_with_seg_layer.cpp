@@ -130,7 +130,7 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
         label_shape[2] = std::max(num_bboxes, 1);
         label_shape[3] = 8;
       } else {
-        LOG(FATAL) << "Unknown annotation type.";prefetch_
+        LOG(FATAL) << "Unknown annotation type.";
       }
     } else {
       label_shape[0] = batch_size;
