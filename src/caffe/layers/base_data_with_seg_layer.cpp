@@ -55,8 +55,6 @@ void BasePrefetchingDataWithSegLayer<Dtype>::LayerSetUp(
     if (this->output_labels_) {
       prefetch_[i].label_.mutable_cpu_data();
     }
-//    //added by pesong
-//    prefetch_[i].label_img_.mutable_cpu_data();
   }
 #ifndef CPU_ONLY
   if (Caffe::mode() == Caffe::GPU) {
@@ -65,8 +63,6 @@ void BasePrefetchingDataWithSegLayer<Dtype>::LayerSetUp(
       if (this->output_labels_) {
         prefetch_[i].label_.mutable_gpu_data();
       }
-//      // added by pesong
-//      prefetch_[i].label_img_.mutable_gpu_data();
     }
   }
 #endif
@@ -92,8 +88,6 @@ void BasePrefetchingDataWithSegLayer<Dtype>::InternalThreadEntry() {
 #ifndef CPU_ONLY
       if (Caffe::mode() == Caffe::GPU) {
         batch->data_.data().get()->async_gpu_push(stream);
-//        // added by pesong
-//        batch->label_img_.data().get()->async_gpu_push(stream);
         CUDA_CHECK(cudaStreamSynchronize(stream));
       }
 #endif
@@ -115,14 +109,10 @@ void BasePrefetchingDataWithSegLayer<Dtype>::Forward_cpu(
   Batch<Dtype>* batch = prefetch_full_.pop("Data layer prefetch queue empty");
   // Reshape to loaded data.
   top[0]->ReshapeLike(batch->data_);
-//  //added by pesong
-//  top[2]->ReshapeLike(batch->label_img_);
-
   // Copy the data
   caffe_copy(batch->data_.count(), batch->data_.cpu_data(),
              top[0]->mutable_cpu_data());
   DLOG(INFO) << "Prefetch copied";
-
   if (this->output_labels_) {
     // Reshape to loaded labels.
     top[1]->ReshapeLike(batch->label_);
@@ -130,12 +120,6 @@ void BasePrefetchingDataWithSegLayer<Dtype>::Forward_cpu(
     caffe_copy(batch->label_.count(), batch->label_.cpu_data(),
         top[1]->mutable_cpu_data());
   }
-
-//  //added by pesong
-//  // Copy the data seg label
-//  caffe_copy(batch->label_img_.count(), batch->label_img_.cpu_data(),
-//        top[2]->mutable_cpu_data());
-
 
   prefetch_free_.push(batch);
 }
