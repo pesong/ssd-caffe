@@ -9,14 +9,14 @@
 #include "caffe/data_transformer.hpp"
 #include "caffe/internal_thread.hpp"
 #include "caffe/layer.hpp"
-#include "caffe/layers/base_data_layer.hpp"
+#include "caffe/layers/base_data_with_seg_layer.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/db.hpp"
 
 namespace caffe {
 
 template <typename Dtype>
-class AnnotatedDataWithSegLayer : public BasePrefetchingDataLayer<Dtype> {
+class AnnotatedDataWithSegLayer : public BasePrefetchingDataWithSegLayer<Dtype> {
  public:
   explicit AnnotatedDataWithSegLayer(const LayerParameter& param);
   virtual ~AnnotatedDataWithSegLayer();

@@ -16,7 +16,7 @@ namespace caffe {
 
 template <typename Dtype>
 AnnotatedDataWithSegLayer<Dtype>::AnnotatedDataWithSegLayer(const LayerParameter& param)
-  : BasePrefetchingDataLayer<Dtype>(param),
+  : BasePrefetchingDataWithSegLayer<Dtype>(param),
     reader_(param) {
 }
 
@@ -124,7 +124,7 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
         }
         label_shape[0] = 1;
         label_shape[1] = 1;
-        // BasePrefetchingDataLayer<Dtype>::LayerSetUp() requires to call
+        // BasePrefetchingDataWithSegLayer<Dtype>::LayerSetUp() requires to call
         // cpu_data and gpu_data for consistent prefetch thread. Thus we make
         // sure there is at least one bbox.
         label_shape[2] = std::max(num_bboxes, 1);
