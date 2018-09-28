@@ -50,10 +50,8 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
     }
   }
 
-
 // 读取一个数据，并读取数据的shape,初始化top的shape和prefetch的shape(比如数据大小为300x300)
 // AnnotatedDatum包含了数据和标注(标注包含了label和bounding box)
-
   // Read a data point, and use it to initialize the top blob.
   AnnotatedDatum& anno_datum = *(reader_.full().peek());
 
@@ -68,36 +66,35 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
 
 
 
-
-
-/*
- * pesong:  read label image
- */
-
+    //added by pesong:  read label image
     // Use data_transformer to infer the expected blob shape from anno_datum.
-    vector<int> top_shape_label =
-            this->data_transformer_->InferBlobShape(anno_datum.datum());
-    this->transformed_data_.Reshape(top_shape_label);
+  vector<int> top_shape_label =
+            this->data_transformer_->InferBlobShape(anno_datum.datum_label());
+  this->transformed_data_.Reshape(top_shape_label);
 
     // Reshape top[1] and prefetch_data according to the batch_size.
-    top_shape_label[0] = batch_size;
-    top[2]->Reshape(top_shape_label);
+  top_shape_label[0] = batch_size;
+  top[2]->Reshape(top_shape_label);
 
 
 
-
-
-// 预读线程中的图像数据
+    // 预读线程中的图像数据
   for (int i = 0; i < this->PREFETCH_COUNT; ++i) {
     this->prefetch_[i].data_.Reshape(top_shape);
   }
+
+    // 预读线程中的seg label image  added by pesong
+  for (int i = 0; i < this->PREFETCH_COUNT; ++i) {
+    this->prefetch_[i].label_img_.Reshape(top_shape_label);
+    }
+
   LOG(INFO) << "output data size: " << top[0]->num() << ","
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
 
 // label
   if (this->output_labels_) {
-// 生成数据的时候是有类型的 anno_datum.set_type(AnnotatedDatum_AnnotationType_BBOX);
+    // 生成数据的时候是有类型的 anno_datum.set_type(AnnotatedDatum_AnnotationType_BBOX);
     has_anno_type_ = anno_datum.has_type() || anno_data_param.has_anno_type();
     vector<int> label_shape(4, 1);
     if (has_anno_type_) {
@@ -143,9 +140,15 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
   }
 }
 
+
+
 // This function is called on prefetch thread
 template<typename Dtype>
 void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
+
+  LOG(INFO) << "----start load_batch-------- ";
+  LOG(INFO) << "transformed count "<<this->transformed_data_.count();
+
   CPUTimer batch_timer;
   batch_timer.Start();
   double read_time = 0;
@@ -153,6 +156,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   CPUTimer timer;
   CHECK(batch->data_.count());
   CHECK(this->transformed_data_.count());
+
 
   // Reshape according to the first anno_datum of each batch
   // on single input batches allows for inputs of varying dimension.
@@ -164,6 +168,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
 // 初始化transformed_data_和 batch->data_的大小
   AnnotatedDatum& anno_datum = *(reader_.full().peek());
+
   // Use data_transformer to infer the expected blob shape from anno_datum.
   vector<int> top_shape =
       this->data_transformer_->InferBlobShape(anno_datum.datum());
@@ -173,7 +178,20 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   top_shape[0] = batch_size;
   batch->data_.Reshape(top_shape);// batch->data_存储batchsize个图像,对于SSD300，batch->data_大小为[batchsize,3,300,300]
 
+
+    //added by pesong
+  vector<int> top_shape_label =
+            this->data_transformer_->InferBlobShape(anno_datum.datum_label());
+  this->transformed_data_.Reshape(top_shape_label); // transformed_data_存储一幅图像，对于SSD300,transformed_data_大小为:[1,3,300,300]
+
+    // Reshape batch according to the batch_size.
+  top_shape_label[0] = batch_size;
+  batch->label_img_.Reshape(top_shape_label);
+
+
   Dtype* top_data = batch->data_.mutable_cpu_data();
+  Dtype* top_label_img = batch->label_img_.mutable_cpu_data();
+
   Dtype* top_label = NULL;  // suppress warnings about uninitialized variables
   if (this->output_labels_ && !has_anno_type_) {
     top_label = batch->label_.mutable_cpu_data();
@@ -276,15 +294,20 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       sampled_datum = expand_datum;
     }
     CHECK(sampled_datum != NULL);
+
+
+
     timer.Start();
-    vector<int> shape =
-        this->data_transformer_->InferBlobShape(sampled_datum->datum());
+    vector<int> shape = this->data_transformer_->InferBlobShape(sampled_datum->datum());
+
     if (transform_param.has_resize_param()) {
-      if (transform_param.resize_param().resize_mode() ==
-          ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
+      if (transform_param.resize_param().resize_mode() == ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
+
         this->transformed_data_.Reshape(shape);
         batch->data_.Reshape(shape);
+        batch->label_img_.Reshape(shape); // added by pesong
         top_data = batch->data_.mutable_cpu_data();
+        top_label_img = batch->label_img_.mutable_cpu_data();  // added by pesong
       } else {
         CHECK(std::equal(top_shape.begin() + 1, top_shape.begin() + 4,
               shape.begin() + 1));
@@ -294,9 +317,18 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
             shape.begin() + 1));
     }
 
-    // Apply data transformations (mirror, scale, crop...)
+
+
+//     Apply data transformations (mirror, scale, crop...)
     int offset = batch->data_.offset(item_id);
     this->transformed_data_.set_cpu_data(top_data + offset);
+
+    int offset_label_img = batch->label_img_.offset(item_id);
+    this->transformed_data_.set_cpu_data(top_label_img + offset_label_img);
+
+
+
+
     vector<AnnotationGroup> transformed_anno_vec;
     if (this->output_labels_) {
       if (has_anno_type_) {
@@ -323,11 +355,13 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 *     这样有可能会影响到目标的宽高比，所以在SFD(Single Shot Scale-invariant Face Detector)中，对此处做了一点改进，即在第一步
 *     生成boundingbox的时候，保证每个boundingbox都是正方形，这样resize到300x300的时候就不会改变目标的宽高比
 */
-
-        this->data_transformer_->Transform(*sampled_datum,
+          //!!!开始调用data_transformer.cpp line594
+          //!!! Transform the cv::image into blob.
+          this->data_transformer_->Transform(*sampled_datum,
                                            &(this->transformed_data_),
                                            &transformed_anno_vec);
-        if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
+
+          if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
           // Count the number of bboxes.
           for (int g = 0; g < transformed_anno_vec.size(); ++g) {
             num_bboxes += transformed_anno_vec[g].annotation_size();
