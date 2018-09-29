@@ -156,9 +156,11 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob,
                                        NormalizedBBox* crop_bbox,
                                        bool* do_mirror) {
-  // If datum is encoded, decoded and transform the cv::image.
-  if (datum.encoded()) {
 
+    LOG(INFO) << "----Encoded datum----";
+
+    // If datum is encoded, decoded and transform the cv::image.
+  if (datum.encoded()) {
 #ifdef USE_OPENCV
     CHECK(!(param_.force_color() && param_.force_gray()))
         << "cannot set both force_color and force_gray";
@@ -213,7 +215,8 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob) {
   NormalizedBBox crop_bbox;
   bool do_mirror;
-  Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
+      LOG(INFO) << "--------datum label transform-----------";
+    Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
 }
 
 template<typename Dtype>
@@ -241,7 +244,7 @@ void DataTransformer<Dtype>::Transform(
     const AnnotatedDatum& anno_datum, Blob<Dtype>* transformed_blob,
     RepeatedPtrField<AnnotationGroup>* transformed_anno_group_all,
     bool* do_mirror) {
-
+//used by ssd
   // Transform datum.
   const Datum& datum = anno_datum.datum();
   NormalizedBBox crop_bbox;
@@ -597,8 +600,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        NormalizedBBox* crop_bbox,
                                        bool* do_mirror) {
 
-
-  LOG(INFO) << "--------------------------transforming   datum -------------------------";
+  LOG(INFO) << "-------transforming datum -------------";
 
   // Check dimensions.
   const int img_channels = cv_img.channels();
