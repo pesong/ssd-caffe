@@ -171,6 +171,13 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
     } else {
       cv_img = DecodeDatumToCVMatNative(datum);
     }
+
+    // added by pesong, ignore scale and mean for seg label image
+    if(datum.is_seg()) {
+      LOG(INFO)<< "-----transform:  ignore scale and mean";
+      return Transform(cv_img, transformed_blob, crop_bbox, do_mirror, true);
+    }
+
     // Transform the cv::image into blob.
     return Transform(cv_img, transformed_blob, crop_bbox, do_mirror);
 #else
@@ -215,8 +222,8 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob) {
   NormalizedBBox crop_bbox;
   bool do_mirror;
-      LOG(INFO) << "--------datum label transform-----------";
-    Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
+  LOG(INFO) << "--------datum label transform-----------";
+  Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
 }
 
 template<typename Dtype>
@@ -719,6 +726,125 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
             transformed_data[top_index] = pixel * scale;
           }
         }
+      }
+    }
+  }
+}
+
+template<typename Dtype>
+void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
+                                       Blob<Dtype>* transformed_blob,
+                                       NormalizedBBox* crop_bbox,
+                                       bool* do_mirror,
+                                       const bool is_seg) {
+
+  LOG(INFO) << "-------transforming datum:  is_seg-------------";
+
+  // Check dimensions.
+  const int img_channels = cv_img.channels();
+  const int channels = transformed_blob->channels();
+  const int height = transformed_blob->height();
+  const int width = transformed_blob->width();
+  const int num = transformed_blob->num();
+
+  CHECK_GT(img_channels, 0);
+  CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
+  CHECK_EQ(channels, img_channels);
+  CHECK_GE(num, 1);
+
+  const int crop_size = param_.crop_size();
+//  const Dtype scale = param_.scale();
+  *do_mirror = param_.mirror() && Rand(2);
+  const bool has_mean_file = param_.has_mean_file();
+  const bool has_mean_values = mean_values_.size() > 0;
+
+  if (has_mean_file) {
+    CHECK_EQ(img_channels, data_mean_.channels());
+//    mean = data_mean_.mutable_cpu_data();
+  }
+  if (has_mean_values) {
+    CHECK(mean_values_.size() == 1 || mean_values_.size() == img_channels) <<
+        "Specify either 1 mean_value or as many as channels: " << img_channels;
+    if (img_channels > 1 && mean_values_.size() == 1) {
+      // Replicate the mean_value for simplicity
+      for (int c = 1; c < img_channels; ++c) {
+        mean_values_.push_back(mean_values_[0]);
+      }
+    }
+  }
+
+  int crop_h = param_.crop_h();
+  int crop_w = param_.crop_w();
+  if (crop_size) {
+    crop_h = crop_size;
+    crop_w = crop_size;
+  }
+
+  cv::Mat cv_resized_image, cv_noised_image, cv_cropped_image;
+  if (param_.has_resize_param()) {
+    cv_resized_image = ApplyResize(cv_img, param_.resize_param());
+  } else {
+    cv_resized_image = cv_img;
+  }
+  if (param_.has_noise_param()) {
+    cv_noised_image = ApplyNoise(cv_resized_image, param_.noise_param());
+  } else {
+    cv_noised_image = cv_resized_image;
+  }
+  int img_height = cv_noised_image.rows;
+  int img_width = cv_noised_image.cols;
+  CHECK_GE(img_height, crop_h);
+  CHECK_GE(img_width, crop_w);
+
+  int h_off = 0;
+  int w_off = 0;
+  if ((crop_h > 0) && (crop_w > 0)) {
+    CHECK_EQ(crop_h, height);
+    CHECK_EQ(crop_w, width);
+    // We only do random crop when we do training.
+    if (phase_ == TRAIN) {
+      h_off = Rand(img_height - crop_h + 1);
+      w_off = Rand(img_width - crop_w + 1);
+    } else {
+      h_off = (img_height - crop_h) / 2;
+      w_off = (img_width - crop_w) / 2;
+    }
+    cv::Rect roi(w_off, h_off, crop_w, crop_h);
+    cv_cropped_image = cv_noised_image(roi);
+  } else {
+    cv_cropped_image = cv_noised_image;
+  }
+
+  // Return the normalized crop bbox.
+  crop_bbox->set_xmin(Dtype(w_off) / img_width);
+  crop_bbox->set_ymin(Dtype(h_off) / img_height);
+  crop_bbox->set_xmax(Dtype(w_off + width) / img_width);
+  crop_bbox->set_ymax(Dtype(h_off + height) / img_height);
+
+  if (has_mean_file) {
+    CHECK_EQ(cv_cropped_image.rows, data_mean_.height());
+    CHECK_EQ(cv_cropped_image.cols, data_mean_.width());
+  }
+  CHECK(cv_cropped_image.data);
+
+  Dtype* transformed_data = transformed_blob->mutable_cpu_data();
+  int top_index;
+  for (int h = 0; h < height; ++h) {
+    const uchar* ptr = cv_cropped_image.ptr<uchar>(h);
+    int img_index = 0;
+    int h_idx = h;
+    for (int w = 0; w < width; ++w) {
+      int w_idx = w;
+      if (*do_mirror) {
+        w_idx = (width - 1 - w);
+      }
+      int h_idx_real = h_idx;
+      int w_idx_real = w_idx;
+      for (int c = 0; c < img_channels; ++c) {
+        top_index = (c * height + h_idx_real) * width + w_idx_real;
+        Dtype pixel = static_cast<Dtype>(ptr[img_index++]);
+
+        transformed_data[top_index] = pixel;
       }
     }
   }

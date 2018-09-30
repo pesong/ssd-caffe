@@ -189,7 +189,7 @@ bool ReadImageToDatum(const string& filename, const int label,
                                     is_color);
   if (cv_img.data) {
     if (is_seg) {
-      LOG(INFO)<<"is_seg:true";
+//      LOG(INFO)<<"is_seg:true";
       datum->set_is_seg(is_seg);
     }
 

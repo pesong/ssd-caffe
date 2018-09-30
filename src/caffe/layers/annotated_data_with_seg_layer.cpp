@@ -279,7 +279,6 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     timer.Start();
     vector<int> shape = this->data_transformer_->InferBlobShape(sampled_datum->datum());
 
-    // todo  checkfiled  datum_channels > 0 (0 vs. 0)
 //    LOG(INFO) << "datum_label" <<sampled_datum->datum_label();
     vector<int> shape_label = this->data_transformer_->InferBlobShape(sampled_datum->datum_label()); // added by pesong
 
@@ -332,6 +331,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
         this->data_transformer_->Transform(*sampled_datum, &(this->transformed_data_), &transformed_anno_vec);
 
           // todo   datum_label() Check failed: channels == datum_channels (3 vs. 0)
+        // for seg label, ignore the scale and mean
         this->data_transformer_->Transform(sampled_datum->datum_label(), &(this->transformed_label_img_));
 
         if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
