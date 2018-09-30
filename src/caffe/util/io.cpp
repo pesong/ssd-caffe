@@ -182,6 +182,39 @@ bool ReadImageToDatum(const string& filename, const int label,
   }
 }
 
+bool ReadImageToDatum(const string& filename, const int label,
+    const int height, const int width, const int min_dim, const int max_dim,
+    const bool is_color, const std::string & encoding, Datum* datum, const bool is_seg) {
+  cv::Mat cv_img = ReadImageToCVMat(filename, height, width, min_dim, max_dim,
+                                    is_color);
+  if (cv_img.data) {
+    if (is_seg) {
+      LOG(INFO)<<"is_seg:true";
+      datum->set_is_seg(is_seg);
+    }
+
+    if (encoding.size()) {
+      if ( (cv_img.channels() == 3) == is_color && !height && !width &&
+          !min_dim && !max_dim && matchExt(filename, encoding) ) {
+        datum->set_channels(cv_img.channels());
+        datum->set_height(cv_img.rows);
+        datum->set_width(cv_img.cols);
+        return ReadFileToDatum(filename, label, datum);
+      }
+      EncodeCVMatToDatum(cv_img, encoding, datum);
+      datum->set_label(label);
+      return true;
+    }
+
+    CVMatToDatum(cv_img, datum);
+    datum->set_label(label);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
 void GetImageSize(const string& filename, int* height, int* width) {
   cv::Mat cv_img = cv::imread(filename);
   if (!cv_img.data) {
@@ -254,7 +287,7 @@ bool ReadRichImageToAnnotatedDatumWithSeg(const string& filename, const string& 
   // Read segmentation label image to datum.
   bool status_label = ReadImageToDatum(labelimagename, -1, height, width,
                                  min_dim, max_dim, is_color, encoding,
-                                 anno_datum->mutable_datum_label());
+                                 anno_datum->mutable_datum_label(), true);
   if (status_label == false ) {
     return status_label;
   }

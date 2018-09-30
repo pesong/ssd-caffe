@@ -133,6 +133,11 @@ bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const int min_dim, const int max_dim,
     const bool is_color, const std::string & encoding, Datum* datum);
 
+bool ReadImageToDatum(const string& filename, const int label,
+    const int height, const int width, const int min_dim, const int max_dim,
+    const bool is_color, const std::string & encoding, Datum* datum, const bool is_seg);
+
+
 inline bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const int min_dim, const int max_dim,
     const bool is_color, Datum* datum) {

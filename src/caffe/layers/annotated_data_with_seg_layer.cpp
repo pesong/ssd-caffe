@@ -254,6 +254,8 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
     if (batch_samplers_.size() > 0) {
 
+      LOG(INFO) << "--------------------------------batch_samplers_:";
+
       // Generate sampled bboxes from expand_datum.
       vector<NormalizedBBox> sampled_bboxes;
       GenerateBatchSamples(*expand_datum, batch_samplers_, &sampled_bboxes);
@@ -269,6 +271,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       }
 
     } else {
+      LOG(INFO) << "--------------------------------expand_datum:";
       sampled_datum = expand_datum;
     }
     CHECK(sampled_datum != NULL);
@@ -329,7 +332,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
         this->data_transformer_->Transform(*sampled_datum, &(this->transformed_data_), &transformed_anno_vec);
 
           // todo   datum_label() Check failed: channels == datum_channels (3 vs. 0)
-//        this->data_transformer_->Transform(sampled_datum->datum_label(), &(this->transformed_label_img_));
+        this->data_transformer_->Transform(sampled_datum->datum_label(), &(this->transformed_label_img_));
 
         if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
           // Count the number of bboxes.
