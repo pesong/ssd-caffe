@@ -218,15 +218,17 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
 
     if (transform_param.has_distort_param()) {
+
       distort_datum.CopyFrom(anno_datum);
-      this->data_transformer_->DistortImage(anno_datum.datum(),
-                                            distort_datum.mutable_datum());
+      this->data_transformer_->DistortImage(anno_datum.datum(), distort_datum.mutable_datum());
+
       if (transform_param.has_expand_param()) {
         expand_datum = new AnnotatedDatum();
         this->data_transformer_->ExpandImage(distort_datum, expand_datum);
       } else {
         expand_datum = &distort_datum;
       }
+
     } else {
       if (transform_param.has_expand_param()) {
         expand_datum = new AnnotatedDatum();
@@ -235,61 +237,26 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
         expand_datum = &anno_datum;
       }
     }
-    AnnotatedDatum* sampled_datum = NULL;
 
+    AnnotatedDatum* sampled_datum = NULL;
     bool has_sampled = false;
 
-
-/* 1. 首先进行数据增强(对应论文2.2 Training部分的Data augmentation)
-* 对于batchsize中的每一幅图像，为每个采样器(batch_sampler)生成max_sample个boundingbox(候选框)
-* 每个采样器生成的boundingbox与目标的IOU=0.1,0.3,0.5,0.7,0.9，这个与论文的描述是一致的
-* 示例：
-  batch_sampler
-  {
-    sampler
-    {
-      min_scale: 0.3
-      max_scale: 1.0
-      min_aspect_ratio: 0.5
-      max_aspect_ratio: 2.0
-    }
-    sample_constraint
-    {
-      min_jaccard_overlap: 0.7
-    }
-    max_sample: 1
-    max_trials: 50
-  }
-*  对于该采样器，随机生成的满足条件的boundingbox与图像中任一目标的IOU>0.7
-*  注意：
-*    1). 生成的boundingbox坐标是归一化的坐标，这样不受resize的影响，目标检测的回归都是采用的这种形式(比如MTCNN)
-*    2). 随机生成boundingbox的时候，根据每个batch_sampler的参数：尺度，宽高比，每个采样器最多尝试max_trials次
-*
-*/
     if (batch_samplers_.size() > 0) {
 
       // Generate sampled bboxes from expand_datum.
       vector<NormalizedBBox> sampled_bboxes;
       GenerateBatchSamples(*expand_datum, batch_samplers_, &sampled_bboxes);
 
-/*2. 从生成的所有bounding box中随机挑选一个bounding box
-* 裁剪出该bounding box对应的图像(大小就是sampled_bboxes[rand_idx]在原图中的大小)并计算该bounding box中所有目标的坐标以及类别
-* 注意：
-*    1). bounding box中目标的坐标=(原图中ground truth的坐标-该bounding box的坐标)/(bounding box的边长)
-*    2). 这里groundtruth与boundingbox的坐标都相对于原图,在mtcnn中也是采用了该计算方式
-*
-*/
       if (sampled_bboxes.size() > 0) {
         // Randomly pick a sampled bbox and crop the expand_datum.
         int rand_idx = caffe_rng_rand() % sampled_bboxes.size();
         sampled_datum = new AnnotatedDatum();
-        this->data_transformer_->CropImage(*expand_datum,
-                                           sampled_bboxes[rand_idx],
-                                           sampled_datum);
+        this->data_transformer_->CropImage(*expand_datum, sampled_bboxes[rand_idx], sampled_datum);
         has_sampled = true;
       } else {
         sampled_datum = expand_datum;
       }
+
     } else {
       sampled_datum = expand_datum;
     }
@@ -301,21 +268,21 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // todo  checkfiled  datum_channels > 0 (0 vs. 0)
 //    vector<int> shape_label = this->data_transformer_->InferBlobShape(sampled_datum->datum_label()); // added by pesong
 
-      if (transform_param.has_resize_param()) {
-      if (transform_param.resize_param().resize_mode() == ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
+    if (transform_param.has_resize_param()) {
+          if (transform_param.resize_param().resize_mode() == ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
 
-        this->transformed_data_.Reshape(shape);
-        batch->data_.Reshape(shape);
+            this->transformed_data_.Reshape(shape);
+            batch->data_.Reshape(shape);
 
-        this->transformed_label_img_.Reshape(shape); // added by pesong
-        batch->label_img_.Reshape(shape); // added by pesong
+            this->transformed_label_img_.Reshape(shape); // added by pesong
+            batch->label_img_.Reshape(shape); // added by pesong
 
-        top_data = batch->data_.mutable_cpu_data();
-        top_label_img = batch->label_img_.mutable_cpu_data();  // added by pesong
-      } else {
-        CHECK(std::equal(top_shape.begin() + 1, top_shape.begin() + 4,
-              shape.begin() + 1));
-      }
+            top_data = batch->data_.mutable_cpu_data();
+            top_label_img = batch->label_img_.mutable_cpu_data();  // added by pesong
+          } else {
+            CHECK(std::equal(top_shape.begin() + 1, top_shape.begin() + 4,
+                  shape.begin() + 1));
+          }
     } else {
       CHECK(std::equal(top_shape.begin() + 1, top_shape.begin() + 4,
             shape.begin() + 1));
@@ -332,31 +299,27 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
     vector<AnnotationGroup> transformed_anno_vec;
     if (this->output_labels_) {
+
       if (has_anno_type_) {
         // Make sure all data have same annotation type.
         CHECK(sampled_datum->has_type()) << "Some datum misses AnnotationType.";
         if (anno_data_param.has_anno_type()) {
           sampled_datum->set_type(anno_type_);
         } else {
-          CHECK_EQ(anno_type_, sampled_datum->type()) <<
-              "Different AnnotationType.";
+          CHECK_EQ(anno_type_, sampled_datum->type()) << "Different AnnotationType.";
         }
-
 
         // Transform datum and annotation_group at the same time
         transformed_anno_vec.clear();
 
          //!!!开始调用data_transformer.cpp line594
           //!!! Transform the cv::image into blob.
-          this->data_transformer_->Transform(*sampled_datum,
-                                           &(this->transformed_data_),
-                                           &transformed_anno_vec);
+        this->data_transformer_->Transform(*sampled_datum, &(this->transformed_data_), &transformed_anno_vec);
 
           // todo   datum_label() Check failed: channels == datum_channels (3 vs. 0)
-          this->data_transformer_->Transform(sampled_datum->datum_label(),
-                                             &(this->transformed_label_img_));
+//        this->data_transformer_->Transform(sampled_datum->datum_label(), &(this->transformed_label_img_));
 
-          if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
+        if (anno_type_ == AnnotatedDatum_AnnotationType_BBOX) {
           // Count the number of bboxes.
           for (int g = 0; g < transformed_anno_vec.size(); ++g) {
             num_bboxes += transformed_anno_vec[g].annotation_size();
@@ -365,6 +328,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
           LOG(FATAL) << "Unknown annotation type.";
         }
         all_anno[item_id] = transformed_anno_vec;
+
       } else {
         this->data_transformer_->Transform(sampled_datum->datum(),
                                            &(this->transformed_data_));
@@ -372,10 +336,12 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
         CHECK(sampled_datum->datum().has_label()) << "Cannot find any label.";
         top_label[item_id] = sampled_datum->datum().label();
       }
+
     } else {
       this->data_transformer_->Transform(sampled_datum->datum(),
                                          &(this->transformed_data_));
     }
+
     // clear memory
     if (has_sampled) {
       delete sampled_datum;
