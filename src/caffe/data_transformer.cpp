@@ -1011,6 +1011,8 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
 
 template<typename Dtype>
 vector<int> DataTransformer<Dtype>::InferBlobShape(const Datum& datum) {
+
+  LOG(INFO) << "datum.encode:" << datum.encoded();
   if (datum.encoded()) {
 #ifdef USE_OPENCV
     CHECK(!(param_.force_color() && param_.force_gray()))
@@ -1039,6 +1041,9 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const Datum& datum) {
   const int datum_channels = datum.channels();
   int datum_height = datum.height();
   int datum_width = datum.width();
+
+  LOG(INFO) << "inferblobshape  datum  img_channels:" << datum_channels << "  h: " << datum_height << "  w: " << datum_width ;
+  LOG(INFO) << "inferblobshape  datum  crop_size:" << crop_h << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
 
   // Check dimensions.
   CHECK_GT(datum_channels, 0);
@@ -1083,6 +1088,11 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const cv::Mat& cv_img) {
   const int img_channels = cv_img.channels();
   int img_height = cv_img.rows;
   int img_width = cv_img.cols;
+
+  LOG(INFO) << "inferblobshape  cv_img  img_channels:" << img_channels << "  h: " << img_height << "  w: " <<img_width ;
+  LOG(INFO) << "inferblobshape  cv_img  crop_size:" << crop_size << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
+
+
   // Check dimensions.
   CHECK_GT(img_channels, 0);
   if (param_.has_resize_param()) {

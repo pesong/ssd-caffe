@@ -28,6 +28,8 @@ AnnotatedDataWithSegLayer<Dtype>::~AnnotatedDataWithSegLayer() {
 template <typename Dtype>
 void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+
+    LOG(INFO) << "--------datalayer setup";
   const int batch_size = this->layer_param_.data_param().batch_size();
   const AnnotatedDataParameter& anno_data_param =
       this->layer_param_.annotated_data_param();
@@ -56,8 +58,7 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
   AnnotatedDatum& anno_datum = *(reader_.full().peek());
 
   // Use data_transformer to infer the expected blob shape from anno_datum.
-  vector<int> top_shape =
-      this->data_transformer_->InferBlobShape(anno_datum.datum());
+  vector<int> top_shape = this->data_transformer_->InferBlobShape(anno_datum.datum());
   this->transformed_data_.Reshape(top_shape);
 
   // Reshape top[0] and prefetch_data according to the batch_size.
@@ -68,8 +69,7 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
 
     //added by pesong:  read label image
     // Use data_transformer to infer the expected blob shape from anno_datum.
-  vector<int> top_shape_label =
-          this->data_transformer_->InferBlobShape(anno_datum.datum_label());
+  vector<int> top_shape_label = this->data_transformer_->InferBlobShape(anno_datum.datum_label());
   this->transformed_label_img_.Reshape(top_shape_label);
 
     // Reshape top[1] and prefetch_data according to the batch_size.
@@ -88,9 +88,13 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
     this->prefetch_[i].label_img_.Reshape(top_shape_label);
     }
 
-  LOG(INFO) << "output data size: " << top[0]->num() << ","
+  LOG(INFO) << "----[top0]output data size: " << top[0]->num() << ","
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
+
+LOG(INFO) << "[top2]output lable img size: " << top[2]->num() << ","
+<< top[2]->channels() << "," << top[2]->height() << ","
+<< top[2]->width();
 
 // label
   if (this->output_labels_) {
@@ -147,7 +151,7 @@ template<typename Dtype>
 void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
   LOG(INFO) << "----start load_batch-------- ";
-//  LOG(INFO) << "transformed count "<<this->transformed_data_.count();
+  LOG(INFO) << "batch->label_img_.count "<<batch->label_img_.count();
 
   CPUTimer batch_timer;
   batch_timer.Start();
@@ -155,10 +159,14 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   double trans_time = 0;
   CPUTimer timer;
   CHECK(batch->data_.count());
+  CHECK(batch->label_img_.count());
+
   CHECK(this->transformed_data_.count());
+  CHECK(this->transformed_label_img_.count());
 
 
-  // Reshape according to the first anno_datum of each batch
+
+    // Reshape according to the first anno_datum of each batch
   // on single input batches allows for inputs of varying dimension.
   const int batch_size = this->layer_param_.data_param().batch_size();
   const AnnotatedDataParameter& anno_data_param =
@@ -170,8 +178,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
   AnnotatedDatum& anno_datum = *(reader_.full().peek());
 
   // Use data_transformer to infer the expected blob shape from anno_datum.
-  vector<int> top_shape =
-      this->data_transformer_->InferBlobShape(anno_datum.datum());
+  vector<int> top_shape = this->data_transformer_->InferBlobShape(anno_datum.datum());
   this->transformed_data_.Reshape(top_shape); // transformed_data_存储一幅图像，对于SSD300,transformed_data_大小为:[1,3,300,300]
 
   // Reshape batch according to the batch_size.
@@ -186,6 +193,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     // Reshape batch according to the batch_size.
   top_shape_label[0] = batch_size;
   batch->label_img_.Reshape(top_shape_label);
+//  LOG(INFO) << "-----top_shape_label:---------" <<top_shape_label[0]<<top_shape_label[1]<<top_shape_label[2]<<top_shape_label[3];
 
 
   Dtype* top_data = batch->data_.mutable_cpu_data();
@@ -218,10 +226,11 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
 
     if (transform_param.has_distort_param()) {
-
+      // 对数据作distort
       distort_datum.CopyFrom(anno_datum);
       this->data_transformer_->DistortImage(anno_datum.datum(), distort_datum.mutable_datum());
 
+      // distort的基础上做expand
       if (transform_param.has_expand_param()) {
         expand_datum = new AnnotatedDatum();
         this->data_transformer_->ExpandImage(distort_datum, expand_datum);
@@ -230,6 +239,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       }
 
     } else {
+      // expand
       if (transform_param.has_expand_param()) {
         expand_datum = new AnnotatedDatum();
         this->data_transformer_->ExpandImage(anno_datum, expand_datum);
@@ -238,6 +248,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       }
     }
 
+    //对数据做sample
     AnnotatedDatum* sampled_datum = NULL;
     bool has_sampled = false;
 
@@ -266,7 +277,8 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
     vector<int> shape = this->data_transformer_->InferBlobShape(sampled_datum->datum());
 
     // todo  checkfiled  datum_channels > 0 (0 vs. 0)
-//    vector<int> shape_label = this->data_transformer_->InferBlobShape(sampled_datum->datum_label()); // added by pesong
+//    LOG(INFO) << "datum_label" <<sampled_datum->datum_label();
+    vector<int> shape_label = this->data_transformer_->InferBlobShape(sampled_datum->datum_label()); // added by pesong
 
     if (transform_param.has_resize_param()) {
           if (transform_param.resize_param().resize_mode() == ResizeParameter_Resize_mode_FIT_SMALL_SIZE) {
