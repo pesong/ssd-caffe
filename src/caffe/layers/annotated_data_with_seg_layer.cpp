@@ -29,7 +29,7 @@ template <typename Dtype>
 void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
 
-    LOG(INFO) << "--------datalayer setup";
+//pesong    LOG(INFO) << "--------datalayer setup";
   const int batch_size = this->layer_param_.data_param().batch_size();
   const AnnotatedDataParameter& anno_data_param =
       this->layer_param_.annotated_data_param();
@@ -92,9 +92,10 @@ void AnnotatedDataWithSegLayer<Dtype>::DataLayerSetUp(
       << top[0]->channels() << "," << top[0]->height() << ","
       << top[0]->width();
 
-LOG(INFO) << "[top2]output lable img size: " << top[2]->num() << ","
-<< top[2]->channels() << "," << top[2]->height() << ","
-<< top[2]->width();
+//pesong
+// LOG(INFO) << "[top2]output lable img size: " << top[2]->num() << ","
+//<< top[2]->channels() << "," << top[2]->height() << ","
+//<< top[2]->width();
 
 // label
   if (this->output_labels_) {
@@ -150,8 +151,8 @@ LOG(INFO) << "[top2]output lable img size: " << top[2]->num() << ","
 template<typename Dtype>
 void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
-  LOG(INFO) << "----start load_batch-------- ";
-  LOG(INFO) << "batch->label_img_.count "<<batch->label_img_.count();
+//pesong  LOG(INFO) << "----start load_batch-------- ";
+//pesong  LOG(INFO) << "batch->label_img_.count "<<batch->label_img_.count();
 
   CPUTimer batch_timer;
   batch_timer.Start();
@@ -254,7 +255,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
     if (batch_samplers_.size() > 0) {
 
-      LOG(INFO) << "--------------------------------batch_samplers_:";
+//pesong      LOG(INFO) << "--------------------------------batch_samplers_:";
 
       // Generate sampled bboxes from expand_datum.
       vector<NormalizedBBox> sampled_bboxes;
@@ -271,7 +272,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
       }
 
     } else {
-      LOG(INFO) << "--------------------------------expand_datum:";
+//pesong      LOG(INFO) << "--------------------------------expand_datum:";
       sampled_datum = expand_datum;
     }
     CHECK(sampled_datum != NULL);

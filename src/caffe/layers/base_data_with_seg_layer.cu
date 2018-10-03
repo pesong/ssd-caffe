@@ -9,7 +9,7 @@ void BasePrefetchingDataWithSegLayer<Dtype>::Forward_gpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   Batch<Dtype>* batch = prefetch_full_.pop("Data layer prefetch queue empty");
 
-  LOG(INFO) << "------------------Forward_Gpu-------------------------" ;
+  // pesong LOG(INFO) << "------------------Forward_Gpu-------------------------" ;
 
   // Reshape to loaded data.
   top[0]->ReshapeLike(batch->data_);

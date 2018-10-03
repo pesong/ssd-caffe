@@ -286,7 +286,7 @@ bool ReadRichImageToAnnotatedDatumWithSeg(const string& filename, const string& 
 
   // Read segmentation label image to datum.
   bool status_label = ReadImageToDatum(labelimagename, -1, height, width,
-                                 min_dim, max_dim, is_color, encoding,
+                                 min_dim, max_dim, false, encoding,
                                  anno_datum->mutable_datum_label(), true);
   if (status_label == false ) {
     return status_label;

@@ -157,7 +157,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        NormalizedBBox* crop_bbox,
                                        bool* do_mirror) {
 
-    LOG(INFO) << "----Encoded datum----";
+// pesong    LOG(INFO) << "----Encoded datum----";
 
     // If datum is encoded, decoded and transform the cv::image.
   if (datum.encoded()) {
@@ -174,7 +174,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 
     // added by pesong, ignore scale and mean for seg label image
     if(datum.is_seg()) {
-      LOG(INFO)<< "-----transform:  ignore scale and mean";
+//pesong      LOG(INFO)<< "-----transform:  ignore scale and mean";
       return Transform(cv_img, transformed_blob, crop_bbox, do_mirror, true);
     }
 
@@ -222,7 +222,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
                                        Blob<Dtype>* transformed_blob) {
   NormalizedBBox crop_bbox;
   bool do_mirror;
-  LOG(INFO) << "--------datum label transform-----------";
+//pesong  LOG(INFO) << "--------datum label transform-----------";
   Transform(datum, transformed_blob, &crop_bbox, &do_mirror);
 }
 
@@ -607,7 +607,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        NormalizedBBox* crop_bbox,
                                        bool* do_mirror) {
 
-  LOG(INFO) << "-------transforming datum -------------";
+//pesong  LOG(INFO) << "-------transforming datum -------------";
 
   // Check dimensions.
   const int img_channels = cv_img.channels();
@@ -738,7 +738,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        bool* do_mirror,
                                        const bool is_seg) {
 
-  LOG(INFO) << "-------transforming datum:  is_seg-------------";
+//pesong  LOG(INFO) << "-------transforming datum:  is_seg-------------";
 
   // Check dimensions.
   const int img_channels = cv_img.channels();
@@ -755,23 +755,6 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   const int crop_size = param_.crop_size();
 //  const Dtype scale = param_.scale();
   *do_mirror = param_.mirror() && Rand(2);
-  const bool has_mean_file = param_.has_mean_file();
-  const bool has_mean_values = mean_values_.size() > 0;
-
-  if (has_mean_file) {
-    CHECK_EQ(img_channels, data_mean_.channels());
-//    mean = data_mean_.mutable_cpu_data();
-  }
-  if (has_mean_values) {
-    CHECK(mean_values_.size() == 1 || mean_values_.size() == img_channels) <<
-        "Specify either 1 mean_value or as many as channels: " << img_channels;
-    if (img_channels > 1 && mean_values_.size() == 1) {
-      // Replicate the mean_value for simplicity
-      for (int c = 1; c < img_channels; ++c) {
-        mean_values_.push_back(mean_values_[0]);
-      }
-    }
-  }
 
   int crop_h = param_.crop_h();
   int crop_w = param_.crop_w();
@@ -821,10 +804,6 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   crop_bbox->set_xmax(Dtype(w_off + width) / img_width);
   crop_bbox->set_ymax(Dtype(h_off + height) / img_height);
 
-  if (has_mean_file) {
-    CHECK_EQ(cv_cropped_image.rows, data_mean_.height());
-    CHECK_EQ(cv_cropped_image.cols, data_mean_.width());
-  }
   CHECK(cv_cropped_image.data);
 
   Dtype* transformed_data = transformed_blob->mutable_cpu_data();
@@ -1138,7 +1117,7 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
 template<typename Dtype>
 vector<int> DataTransformer<Dtype>::InferBlobShape(const Datum& datum) {
 
-  LOG(INFO) << "datum.encode:" << datum.encoded();
+// pesong  LOG(INFO) << "datum.encode:" << datum.encoded();
   if (datum.encoded()) {
 #ifdef USE_OPENCV
     CHECK(!(param_.force_color() && param_.force_gray()))
@@ -1168,8 +1147,8 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const Datum& datum) {
   int datum_height = datum.height();
   int datum_width = datum.width();
 
-  LOG(INFO) << "inferblobshape  datum  img_channels:" << datum_channels << "  h: " << datum_height << "  w: " << datum_width ;
-  LOG(INFO) << "inferblobshape  datum  crop_size:" << crop_h << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
+// pesong  LOG(INFO) << "inferblobshape  datum  img_channels:" << datum_channels << "  h: " << datum_height << "  w: " << datum_width ;
+// pesong LOG(INFO) << "inferblobshape  datum  crop_size:" << crop_h << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
 
   // Check dimensions.
   CHECK_GT(datum_channels, 0);
@@ -1215,8 +1194,8 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const cv::Mat& cv_img) {
   int img_height = cv_img.rows;
   int img_width = cv_img.cols;
 
-  LOG(INFO) << "inferblobshape  cv_img  img_channels:" << img_channels << "  h: " << img_height << "  w: " <<img_width ;
-  LOG(INFO) << "inferblobshape  cv_img  crop_size:" << crop_size << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
+//pesong  LOG(INFO) << "inferblobshape  cv_img  img_channels:" << img_channels << "  h: " << img_height << "  w: " <<img_width ;
+//pesong  LOG(INFO) << "inferblobshape  cv_img  crop_size:" << crop_size << "  crop_h: " << crop_h << "  crop_w: " <<crop_w ;
 
 
   // Check dimensions.
