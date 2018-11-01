@@ -255,8 +255,7 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
 
     if (batch_samplers_.size() > 0) {
 
-//pesong      LOG(INFO) << "--------------------------------batch_samplers_:";
-
+      //todo: add batch_samplers to gaussian union model
       // Generate sampled bboxes from expand_datum.
       vector<NormalizedBBox> sampled_bboxes;
       GenerateBatchSamples(*expand_datum, batch_samplers_, &sampled_bboxes);
@@ -331,7 +330,6 @@ void AnnotatedDataWithSegLayer<Dtype>::load_batch(Batch<Dtype>* batch) {
           //!!! Transform the cv::image into blob.
         this->data_transformer_->Transform(*sampled_datum, &(this->transformed_data_), &transformed_anno_vec);
 
-          // todo   datum_label() Check failed: channels == datum_channels (3 vs. 0)
         // for seg label, ignore the scale and mean
         this->data_transformer_->Transform(sampled_datum->datum_label(), &(this->transformed_label_img_));
 

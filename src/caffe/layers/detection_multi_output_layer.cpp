@@ -9,12 +9,12 @@
 #include "boost/filesystem.hpp"
 #include "boost/foreach.hpp"
 
-#include "caffe/layers/detection_output_layer.hpp"
+#include "caffe/layers/detection_multi_output_layer.hpp"
 
 namespace caffe {
 
 template <typename Dtype>
-void DetectionOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
+void DetectionMultiOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const DetectionOutputParameter& detection_output_param =
       this->layer_param_.detection_output_param();
@@ -126,7 +126,7 @@ void DetectionOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
-void DetectionOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
+void DetectionMultiOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   if (need_save_) {
     CHECK_LE(name_count_, names_.size());
@@ -178,7 +178,7 @@ void DetectionOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 }
 
 template <typename Dtype>
-void DetectionOutputLayer<Dtype>::Forward_cpu(
+void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   const Dtype* loc_data = bottom[0]->cpu_data();
   const Dtype* conf_data = bottom[1]->cpu_data();
@@ -488,10 +488,10 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
 }
 
 #ifdef CPU_ONLY
-STUB_GPU_FORWARD(DetectionOutputLayer, Forward);
+STUB_GPU_FORWARD(DetectionMultiOutputLayer, Forward);
 #endif
 
-INSTANTIATE_CLASS(DetectionOutputLayer);
-REGISTER_LAYER_CLASS(DetectionOutput);
+INSTANTIATE_CLASS(DetectionMultiOutputLayer);
+REGISTER_LAYER_CLASS(DetectionMultiOutput);
 
 }  // namespace caffe
