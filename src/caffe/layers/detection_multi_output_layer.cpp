@@ -20,6 +20,8 @@ void DetectionMultiOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bo
       this->layer_param_.detection_output_param();
   CHECK(detection_output_param.has_num_classes()) << "Must specify num_classes";
   num_classes_ = detection_output_param.num_classes();
+//  std::cout<<num_classes_<<std::endl;
+  out_len = 5 + 2 * (num_classes_-1);
   share_location_ = detection_output_param.share_location();
   num_loc_classes_ = share_location_ ? 1 : num_classes_;
   background_label_id_ = detection_output_param.background_label_id();
@@ -173,7 +175,7 @@ void DetectionMultiOutputLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& botto
   top_shape.push_back(1);
   // Each row is a 7 dimension vector, which stores
   // [image_id, label, confidence, xmin, ymin, xmax, ymax]
-  top_shape.push_back(7);
+  top_shape.push_back(out_len);
   top[0]->Reshape(top_shape);
 }
 
@@ -196,21 +198,22 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
                       &all_conf_scores);
 
   //pesong print all_conf_scores
-  std::cout<<"print all_conf_scores"<<std::endl;
-  for(int i=0; i<all_conf_scores.size(); i++)
-  {
-      map<int, vector<float> > m = all_conf_scores[i];
-      map<int, vector<float> >::iterator it;
-      for(it=m.begin(); it!=m.end(); ++it)
-      {
-         std::cout<< it->first << std::endl ;
-         for(int j=0; j<it->second.size(); j++)
-         {
-             std::cout<< setiosflags(ios::fixed) << std::setprecision(3) <<"i "<< i <<" j  "<< j << " "<< it->second[j] <<" " ;
-         }
-         std::cout<<std:: endl;
-      }
-  }
+//  std::cout<<"print all_conf_scores: "<<std::endl;
+//  for(int i=0; i<all_conf_scores.size(); i++)
+//  {
+//      std::cout<<all_conf_scores.size()<<std::endl;
+//      map<int, vector<float> > m = all_conf_scores[i];
+//      map<int, vector<float> >::iterator it;
+//      for(it=m.begin(); it!=m.end(); ++it)
+//      {
+//         std::cout<< it->first << std::endl ;
+//         for(int j=0; j<it->second.size(); j++)
+//         {
+//             std::cout<< setiosflags(ios::fixed) << std::setprecision(3) <<"i "<< i <<" j  "<< j << " "<< it->second[j] <<" " ;
+//         }
+//         std::cout<<std:: endl;
+//      }
+//  }
 
 
 
@@ -252,10 +255,20 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
         continue;
       }
       const vector<NormalizedBBox>& bboxes = decode_bboxes.find(label)->second;
+      //NMS 是对indices进行的操作，保留bbox的index
       ApplyNMSFast(bboxes, scores, confidence_threshold_, nms_threshold_, eta_,
           top_k_, &(indices[c]));
       num_det += indices[c].size();
     }
+
+//    //pesong  print indices after nms
+//    for(map<int, vector<int> >::iterator it = indices.begin(); it != indices.end(); ++it){
+//        std::cout << "indeces after nms: "<< it->first << std::endl;
+//        for(int ind=0; ind<it->second.size(); ++ind){
+//            std::cout << it->second[ind] << std::endl;
+//        }
+//    }
+
     if (keep_top_k_ > -1 && num_det > keep_top_k_) {
       vector<pair<float, pair<int, int> > > score_index_pairs;
       for (map<int, vector<int> >::iterator it = indices.begin();
@@ -296,7 +309,7 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
 
   vector<int> top_shape(2, 1);
   top_shape.push_back(num_kept);
-  top_shape.push_back(7);
+  top_shape.push_back(out_len);
   Dtype* top_data;
   if (num_kept == 0) {
     LOG(INFO) << "Couldn't find any detections";
@@ -307,7 +320,7 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
     // Generate fake results per image.
     for (int i = 0; i < num; ++i) {
       top_data[0] = i;
-      top_data += 7;
+      top_data += out_len;
     }
   } else {
     top[0]->Reshape(top_shape);
@@ -320,7 +333,8 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
     const map<int, vector<float> >& conf_scores = all_conf_scores[i];
     const LabelBBox& decode_bboxes = all_decode_bboxes[i];
     for (map<int, vector<int> >::iterator it = all_indices[i].begin();
-         it != all_indices[i].end(); ++it) {
+         it != all_indices[i].end(); ++it)
+    {
       int label = it->first;
       if (conf_scores.find(label) == conf_scores.end()) {
         // Something bad happened if there are no predictions for current label.
@@ -344,19 +358,34 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
       }
       for (int j = 0; j < indices.size(); ++j) {
         int idx = indices[j];
-        top_data[count * 7] = i;
-        top_data[count * 7 + 1] = label;
-        top_data[count * 7 + 2] = scores[idx];
+        top_data[count * out_len] = i;
+        top_data[count * out_len + 1] = label;
+        top_data[count * out_len + 2] = scores[idx];
         const NormalizedBBox& bbox = bboxes[idx];
-        top_data[count * 7 + 3] = bbox.xmin();
-        top_data[count * 7 + 4] = bbox.ymin();
-        top_data[count * 7 + 5] = bbox.xmax();
-        top_data[count * 7 + 6] = bbox.ymax();
+        top_data[count * out_len + 3] = bbox.xmin();
+        top_data[count * out_len + 4] = bbox.ymin();
+        top_data[count * out_len + 5] = bbox.xmax();
+        top_data[count * out_len + 6] = bbox.ymax();
+
+        //pesong  add other scores
+        int score_id = 7; //other scores index
+        for(int a = 1; a < num_classes_; a++)
+        {
+            if(a != label){
+                top_data[count * out_len + score_id] = a;
+                top_data[count * out_len + score_id + 1 ] = conf_scores.find(a)->second[idx];
+                score_id += 2;
+
+//                std::cout << a << std::endl;
+//                std::cout << conf_scores.find(a)->second[idx] << std::endl;
+            }
+        }
+
         if (need_save_) {
           NormalizedBBox out_bbox;
           OutputBBox(bbox, sizes_[name_count_], has_resize_, resize_param_,
                      &out_bbox);
-          float score = top_data[count * 7 + 2];
+          float score = top_data[count * out_len + 2];
           float xmin = out_bbox.xmin();
           float ymin = out_bbox.ymin();
           float xmax = out_bbox.xmax();

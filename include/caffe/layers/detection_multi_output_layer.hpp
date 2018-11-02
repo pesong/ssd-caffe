@@ -74,6 +74,10 @@ class DetectionMultiOutputLayer : public Layer<Dtype> {
   }
 
   int num_classes_;
+
+  // for multi output, outlen = 5 + 2 * num_classes_;
+  int out_len;
+
   bool share_location_;
   int num_loc_classes_;
   int background_label_id_;

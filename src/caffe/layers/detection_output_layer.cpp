@@ -4,7 +4,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <iomanip>
 
 #include "boost/filesystem.hpp"
 #include "boost/foreach.hpp"
@@ -194,25 +193,6 @@ void DetectionOutputLayer<Dtype>::Forward_cpu(
   vector<map<int, vector<float> > > all_conf_scores;
   GetConfidenceScores(conf_data, num, num_priors_, num_classes_,
                       &all_conf_scores);
-
-  //pesong print all_conf_scores
-  std::cout<<"print all_conf_scores"<<std::endl;
-  for(int i=0; i<all_conf_scores.size(); i++)
-  {
-      map<int, vector<float> > m = all_conf_scores[i];
-      map<int, vector<float> >::iterator it;
-      for(it=m.begin(); it!=m.end(); ++it)
-      {
-         std::cout<< it->first << std::endl ;
-         for(int j=0; j<it->second.size(); j++)
-         {
-             std::cout<< setiosflags(ios::fixed) << std::setprecision(3) <<"i "<< i <<" j  "<< j << " "<< it->second[j] <<" " ;
-         }
-         std::cout<<std:: endl;
-      }
-  }
-
-
 
   // Retrieve all prior bboxes. It is same within a batch since we assume all
   // images in a batch are of same dimension.
