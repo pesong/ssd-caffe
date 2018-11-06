@@ -21,7 +21,7 @@ void DetectionMultiOutputLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bo
   CHECK(detection_output_param.has_num_classes()) << "Must specify num_classes";
   num_classes_ = detection_output_param.num_classes();
 //  std::cout<<num_classes_<<std::endl;
-  out_len = 5 + 2 * (num_classes_-1);
+  out_len = 5 + 2 * num_classes_;
   share_location_ = detection_output_param.share_location();
   num_loc_classes_ = share_location_ ? 1 : num_classes_;
   background_label_id_ = detection_output_param.background_label_id();
@@ -369,7 +369,7 @@ void DetectionMultiOutputLayer<Dtype>::Forward_cpu(
 
         //pesong  add other scores
         int score_id = 7; //other scores index
-        for(int a = 1; a < num_classes_; a++)
+        for(int a = 0; a < num_classes_; a++)
         {
             if(a != label){
                 top_data[count * out_len + score_id] = a;
